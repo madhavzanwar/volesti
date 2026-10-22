@@ -446,3 +446,46 @@ TEST_CASE("round_svd") {
 TEST_CASE("round_sparse") {
     call_test_sparse<double>();
 }
+
+// Regression test for 2-dimensional polytopes: Spectra cannot compute nev = 2
+// eigenvalues of a 2 x 2 matrix (requires nev <= n - 1), which used to make the
+// max inscribed ellipsoid computation and rounding throw.
+template <typename NT>
+void call_test_max_ellipsoid_2d()
+{
+    typedef Cartesian<NT>    Kernel;
+    typedef typename Kernel::Point    Point;
+    typedef HPolytope<Point> Hpolytope;
+    typedef typename Hpolytope::MT MT;
+    typedef typename Hpolytope::VT VT;
+
+    // x >= -1, y >= -1, |x - y| <= 8, x + y <= 50
+    MT A(5, 2);
+    A << -1,  0,
+          0, -1,
+          1, -1,
+         -1,  1,
+          1,  1;
+    VT b(5);
+    b << 1, 1, 8, 8, 50;
+    Hpolytope P(2, A, b);
+
+    Point x0(2);
+    EllipsoidParams<NT> params;
+    std::tuple<MT, VT, bool> ellipsoid;
+    CHECK_NOTHROW(ellipsoid = compute_inscribed_ellipsoid<MT, EllipsoidType::MAX_ELLIPSOID>(
+        P.get_mat(), P.get_vec(), x0.getCoefficients(), params));
+    CHECK(std::get<2>(ellipsoid));
+    CHECK(std::get<0>(ellipsoid).determinant() > NT(0));
+    // the center of the ellipsoid lies inside the polytope
+    CHECK(((P.get_mat() * std::get<1>(ellipsoid) - P.get_vec()).maxCoeff()) < NT(0));
+
+    std::pair<Point, NT> InnerBall = P.ComputeInnerBall();
+    std::tuple<MT, VT, NT> res;
+    CHECK_NOTHROW(res = inscribed_ellipsoid_rounding<MT, VT, NT>(P, InnerBall.first));
+    CHECK(std::get<0>(res).determinant() > NT(0));
+}
+
+TEST_CASE("round_max_ellipsoid_2d") {
+    call_test_max_ellipsoid_2d<double>();
+}

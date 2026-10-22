@@ -129,14 +129,21 @@ std::tuple<MT_dense, VT, bool> max_inscribed_ellipsoid(MT A, VT b, VT const& x0,
             NT rel, Rel;
             
             // computing eigenvalues of E2
-            auto op = get_mat_prod_op<NT>(E2);
-            auto eigs = get_eigs_solver<NT>(op, n);
-            eigs->init();
-            int nconv = eigs->compute(Spectra::SortRule::BothEnds);
-            if (eigs->info() == Spectra::CompInfo::Successful) {
-                Rel = 1.0 / eigs->eigenvalues().coeff(1);
-                rel = 1.0 / eigs->eigenvalues().coeff(0);
-            } else {
+            // Spectra requires nev (= 2 here) <= n - 1, so it cannot be used
+            // for n <= 2; fall back to the dense solver below in that case.
+            bool spectra_success = false;
+            if (n > 2) {
+                auto op = get_mat_prod_op<NT>(E2);
+                auto eigs = get_eigs_solver<NT>(op, n);
+                eigs->init();
+                eigs->compute(Spectra::SortRule::BothEnds);
+                if (eigs->info() == Spectra::CompInfo::Successful) {
+                    Rel = 1.0 / eigs->eigenvalues().coeff(1);
+                    rel = 1.0 / eigs->eigenvalues().coeff(0);
+                    spectra_success = true;
+                }
+            }
+            if (!spectra_success) {
                 Eigen::SelfAdjointEigenSolver<MT> eigensolver(E2); // E2 is positive definite matrix
                 if (eigensolver.info() == Eigen::ComputationInfo::Success) {
                     Rel = 1.0 / eigensolver.eigenvalues().coeff(0);
@@ -206,7 +213,7 @@ std::tuple<MT_dense, VT, bool> max_inscribed_ellipsoid(MT A, VT b, VT const& x0,
 
         R23 = R2 - R3Dy;
         ATP_A.noalias() = ATP * A;
-        ATP_A.diagonal() += ones_m * reg;
+        ATP_A.diagonal().array() += reg; // ATP_A is n x n
         dx = ATP_A.lu().solve(R1 + ATP * R23); // predictor step
 
         // corrector and combined step & length

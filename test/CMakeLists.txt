@@ -319,6 +319,8 @@ add_test(NAME test_round_log_barrier_test
           COMMAND rounding_test -tc=round_log_barrier_test)
 add_test(NAME round_max_ellipsoid_sparse
           COMMAND rounding_test -tc=round_max_ellipsoid_sparse)
+add_test(NAME test_round_max_ellipsoid_2d
+          COMMAND rounding_test -tc=round_max_ellipsoid_2d)
 add_test(NAME round_volumetric_barrier_test
           COMMAND rounding_test -tc=round_volumetric_barrier_test)
 add_test(NAME round_vaidya_barrier_test
