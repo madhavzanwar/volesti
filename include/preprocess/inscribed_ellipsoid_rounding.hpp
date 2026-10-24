@@ -31,7 +31,7 @@ compute_inscribed_ellipsoid(Custom_MT A, VT b, VT const& x0,
         return barrier_center_ellipsoid_linear_ineq<MT, ellipsoid_type, NT>(A, b, x0, params.barrier_params);
     } else
     {
-        std::runtime_error("Unknown rounding method.");
+        throw std::runtime_error("Unknown rounding method.");
     }
     return {};
 }

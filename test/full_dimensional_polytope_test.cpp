@@ -572,3 +572,23 @@ TEST_CASE("full_dimensional_polytope_infeasible")
         std::cout << "Exception during transformation: " << e.what() << std::endl;
     }
 }
+
+TEST_CASE("feasible_point_throws_when_infeasible") {
+    // x <= -1 and x >= 1 cannot both hold, so there is no feasible point
+    MT A(4, 2);
+    A <<  1,  0,
+         -1,  0,
+          0,  1,
+          0, -1;
+    VT b(4);
+    b << -1, -1, 1, 1;
+    CHECK_THROWS_AS(compute_feasible_point(A, b), std::runtime_error);
+
+    // a feasible system still returns a feasible point
+    VT b_ok(4);
+    b_ok << 1, 1, 1, 1;
+    VT x;
+    CHECK_NOTHROW(x = compute_feasible_point(A, b_ok));
+    CHECK(((A * x).array() <= b_ok.array()).all());
+}
+
